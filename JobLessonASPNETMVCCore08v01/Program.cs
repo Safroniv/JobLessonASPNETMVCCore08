@@ -6,10 +6,6 @@ using JobLessonASPNETMVCCore08v01.Models.Reports;
 using JobLessonASPNETMVCCore08v01.Services;
 using JobLessonASPNETMVCCore08v01.Services.Impl;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Orders.DAL;
 using Orders.DAL.Entities;
 
@@ -39,19 +35,30 @@ namespace JobLessonASPNETMVCCore08v01
 
                     _app.UseRouting();
 
+                    _app.UseAuthorization();
 
+                    _app.MapControllerRoute(
+                        name: "default",
+                        pattern: "{controller=Home}/{action=Index}/{id?}");
+                }
+                return _app;
+            }
+            //_host ??= CreateHostBuilder(Environment.GetCommandLineArgs()).Build();
+    }
+
+        public static WebApplicationBuilder CreateHostBuilder(string[] args)
+        {
+            var webApplicationBuilder = WebApplication.CreateBuilder(args);
+            webApplicationBuilder.Host
+            .UseServiceProviderFactory(new AutofacServiceProviderFactory())
             .ConfigureContainer<ContainerBuilder>(container => // Autofac
             {
-
                 var config = new ConfigurationBuilder()
                         .AddJsonFile("autofac.config.json", true, false);
                 var module = new ConfigurationModule(config.Build());
                 var builder = new ContainerBuilder();
                 builder.RegisterModule(module);
-
             })
-
-
             .ConfigureHostConfiguration(options =>
                 options.AddJsonFile("appsettings.json"))
             .ConfigureAppConfiguration(options =>
@@ -66,8 +73,12 @@ namespace JobLessonASPNETMVCCore08v01
                     .AddDebug())
             .ConfigureServices(ConfigureServices);
 
+            return webApplicationBuilder;
+        }
         private static void ConfigureServices(HostBuilderContext host, IServiceCollection services)
         {
+            services.AddControllersWithViews();
+
             #region Register Base Services
             
             // Стандартный способ регистрации сервиса (Microsoft.Extensions.DependencyInjection)
