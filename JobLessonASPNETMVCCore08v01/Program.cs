@@ -20,12 +20,24 @@ namespace JobLessonASPNETMVCCore08v01
     {
         private static Random random = new Random();
 
-        private static IHost? _host;
+        private static WebApplication? _app;
 
-        public static IHost Hosting => _host ??= CreateHostBuilder(Environment.GetCommandLineArgs()).Build();
+        public static WebApplication App
+        {
+            get
+            {
+                if (_app == null)
+                {
+                    _app = CreateHostBuilder(Environment.GetCommandLineArgs()).Build();
 
-        public static IHostBuilder CreateHostBuilder(string[] args) => Host.CreateDefaultBuilder(args)
-            .UseServiceProviderFactory(new AutofacServiceProviderFactory())
+                    if (!_app.Environment.IsDevelopment())
+                    {
+                        _app.UseDeveloperExceptionPage();
+                        //_app.UseExceptionHandler("/Home/Error");
+                    }
+                    _app.UseStaticFiles();
+
+                    _app.UseRouting();
 
 
             .ConfigureContainer<ContainerBuilder>(container => // Autofac
@@ -57,7 +69,7 @@ namespace JobLessonASPNETMVCCore08v01
         private static void ConfigureServices(HostBuilderContext host, IServiceCollection services)
         {
             #region Register Base Services
-
+            
             // Стандартный способ регистрации сервиса (Microsoft.Extensions.DependencyInjection)
             services.AddTransient<IOrderService, OrderService>();
 
@@ -75,7 +87,7 @@ namespace JobLessonASPNETMVCCore08v01
             #endregion
         }
 
-        public static IServiceProvider Services => Hosting.Services;
+        public static IServiceProvider Services => App.Services;
 
         static async Task Main(string[] args)
         {
@@ -132,10 +144,10 @@ namespace JobLessonASPNETMVCCore08v01
 
             #endregion
 
-            var host = Hosting;
-            await host.StartAsync();
+            var app = App;
+            await app.StartAsync();
             await PrintBuyersAsync();
-            await host.StopAsync();
+            await app.StopAsync();
         }
 
         private static async Task PrintBuyersAsync()
