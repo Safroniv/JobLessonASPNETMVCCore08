@@ -6,10 +6,6 @@ using JobLessonASPNETMVCCore08v01.Models.Reports;
 using JobLessonASPNETMVCCore08v01.Services;
 using JobLessonASPNETMVCCore08v01.Services.Impl;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Orders.DAL;
 using Orders.DAL.Entities;
 
@@ -20,26 +16,49 @@ namespace JobLessonASPNETMVCCore08v01
     {
         private static Random random = new Random();
 
-        private static IHost? _host;
+        private static WebApplication? _app;
 
-        public static IHost Hosting => _host ??= CreateHostBuilder(Environment.GetCommandLineArgs()).Build();
+        public static WebApplication App
+        {
+            get
+            {
+                if (_app == null)
+                {
+                    _app = CreateHostBuilder(Environment.GetCommandLineArgs()).Build();
 
-        public static IHostBuilder CreateHostBuilder(string[] args) => Host.CreateDefaultBuilder(args)
+                    if (!_app.Environment.IsDevelopment())
+                    {
+                        _app.UseDeveloperExceptionPage();
+                        //_app.UseExceptionHandler("/Home/Error");
+                    }
+                    _app.UseStaticFiles();
+
+                    _app.UseRouting();
+
+                    _app.UseAuthorization();
+
+                    _app.MapControllerRoute(
+                        name: "default",
+                        pattern: "{controller=Home}/{action=Index}/{id?}");
+                }
+                return _app;
+            }
+            //_host ??= CreateHostBuilder(Environment.GetCommandLineArgs()).Build();
+    }
+
+        public static WebApplicationBuilder CreateHostBuilder(string[] args)
+        {
+            var webApplicationBuilder = WebApplication.CreateBuilder(args);
+            webApplicationBuilder.Host
             .UseServiceProviderFactory(new AutofacServiceProviderFactory())
-
-
             .ConfigureContainer<ContainerBuilder>(container => // Autofac
             {
-
                 var config = new ConfigurationBuilder()
                         .AddJsonFile("autofac.config.json", true, false);
                 var module = new ConfigurationModule(config.Build());
                 var builder = new ContainerBuilder();
                 builder.RegisterModule(module);
-
             })
-
-
             .ConfigureHostConfiguration(options =>
                 options.AddJsonFile("appsettings.json"))
             .ConfigureAppConfiguration(options =>
@@ -54,10 +73,14 @@ namespace JobLessonASPNETMVCCore08v01
                     .AddDebug())
             .ConfigureServices(ConfigureServices);
 
+            return webApplicationBuilder;
+        }
         private static void ConfigureServices(HostBuilderContext host, IServiceCollection services)
         {
-            #region Register Base Services
+            services.AddControllersWithViews();
 
+            #region Register Base Services
+            
             // Стандартный способ регистрации сервиса (Microsoft.Extensions.DependencyInjection)
             services.AddTransient<IOrderService, OrderService>();
 
@@ -75,7 +98,7 @@ namespace JobLessonASPNETMVCCore08v01
             #endregion
         }
 
-        public static IServiceProvider Services => Hosting.Services;
+        public static IServiceProvider Services => App.Services;
 
         static async Task Main(string[] args)
         {
@@ -132,10 +155,10 @@ namespace JobLessonASPNETMVCCore08v01
 
             #endregion
 
-            var host = Hosting;
-            await host.StartAsync();
+            var app = App;
+            await app.StartAsync();
             await PrintBuyersAsync();
-            await host.StopAsync();
+            await app.StopAsync();
         }
 
         private static async Task PrintBuyersAsync()
